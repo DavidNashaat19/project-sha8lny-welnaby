@@ -1,0 +1,175 @@
+# =============================================================================
+#  .github/workflows/scraper_pipeline.yml
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+#  WHAT THIS WORKFLOW DOES
+#  -----------------------
+#  1. Runs on a schedule (every 3 days at midnight UTC) OR on manual trigger.
+#  2. Sets up Python 3.10 on ubuntu-latest.
+#  3. Installs all required dependencies.
+#  4. Runs the scraper   → produces freelance_data.json
+#  5. Runs preprocessor  → produces data_before_cleaning.csv
+#                                    data_after_cleaning.csv
+#  6. Commits & pushes all three output files back to the repository.
+#
+# =============================================================================
+
+name: Scraper & IR Preprocessing Pipeline
+
+# ---------------------------------------------------------------------------
+# TRIGGER CONFIGURATION
+# ---------------------------------------------------------------------------
+on:
+
+  # ── Scheduled trigger: every 3 days at midnight UTC ──────────────────────
+  # Cron syntax:  minute  hour  day-of-month  month  day-of-week
+  # "0 0 */3 * *" = at 00:00 UTC, every 3rd day of the month.
+  schedule:
+    - cron: "0 0 */3 * *"
+
+  # ── Manual trigger: lets you click "Run workflow" in the GitHub UI ────────
+  # You can optionally pass a custom reason string for traceability.
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you running this manually? (optional)"
+        required: false
+        default: "Manual run"
+
+# ---------------------------------------------------------------------------
+# PERMISSIONS
+# ---------------------------------------------------------------------------
+# Grant the workflow's GITHUB_TOKEN write access to the repository contents
+# so it can commit and push the generated data files back.
+# (Also requires the repo setting described at the bottom of this file.)
+permissions:
+  contents: write
+
+# ---------------------------------------------------------------------------
+# JOBS
+# ---------------------------------------------------------------------------
+jobs:
+
+  scrape-and-preprocess:
+
+    # ── Runner: latest Ubuntu LTS ─────────────────────────────────────────
+    runs-on: ubuntu-latest
+
+    # ── Timeout guard: kill the job if it runs longer than 60 min ─────────
+    # Deep-crawling with polite_sleep() can be slow. 60 min is generous but
+    # prevents a hung job from eating your free Actions minutes indefinitely.
+    timeout-minutes: 60
+
+    steps:
+
+      # ── Step 1: Check out the repository ────────────────────────────────
+      # fetch-depth: 0 is needed so the auto-commit action can push correctly.
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history required for git push
+
+      # ── Step 2: Set up Python 3.10 ──────────────────────────────────────
+      - name: "🐍 Set up Python 3.10"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          # Cache pip's download cache between runs to speed up installs.
+          cache: "pip"
+
+      # ── Step 3: Install dependencies ────────────────────────────────────
+      # These are the exact packages imported by both scripts:
+      #   requests        — HTTP client used in the scraper
+      #   beautifulsoup4  — HTML parser (BS4)
+      #   lxml            — fast BS4 backend parser
+      #   pandas          — DataFrame used in preprocess.py
+      - name: "📦 Install Python dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml pandas
+
+      # ── Step 4: Run the scraper ──────────────────────────────────────────
+      # Output: freelance_data.json (written to the repo root by the script).
+      # The '|| true' is intentionally NOT used here — if the scraper fails
+      # (e.g. site structure changed), the whole job should fail loudly so
+      # you notice and fix the selectors, rather than silently preprocessing
+      # an empty or stale JSON file.
+      - name: "🕷️  Run scraper (Deep Crawl)"
+        run: |
+          echo "▶ Starting scraper at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          python scraper_ManeualSubmission_3.py
+          echo "✅ Scraper finished. Checking output..."
+          # Verify the JSON was actually created before proceeding.
+          if [ ! -f freelance_data.json ]; then
+            echo "❌ ERROR: freelance_data.json was not created by the scraper."
+            exit 1
+          fi
+          echo "📄 freelance_data.json size: $(wc -c < freelance_data.json) bytes"
+
+      # ── Step 5: Run the IR preprocessing pipeline ───────────────────────
+      # Input : freelance_data.json
+      # Output: data_before_cleaning.csv
+      #         data_after_cleaning.csv
+      - name: "🔬 Run IR preprocessing pipeline"
+        run: |
+          echo "▶ Starting preprocessor at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          python preprocess_3.py
+          echo "✅ Preprocessor finished. Checking outputs..."
+          # Verify both CSVs were produced.
+          for f in data_before_cleaning.csv data_after_cleaning.csv; do
+            if [ ! -f "$f" ]; then
+              echo "❌ ERROR: $f was not produced by the preprocessor."
+              exit 1
+            fi
+            echo "📄 $f → $(wc -l < $f) rows"
+          done
+
+      # ── Step 6: Commit & push the generated data files ──────────────────
+      # Uses the popular stefanzweifel/git-auto-commit-action which handles
+      # the git add / git diff / git commit / git push flow cleanly.
+      # The action does NOTHING if the files have not changed (idempotent),
+      # so re-running the workflow without new data won't pollute git history.
+      - name: "💾 Commit and push data files"
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          # Files to stage — list every artifact the pipeline produces.
+          file_pattern: "freelance_data.json data_before_cleaning.csv data_after_cleaning.csv"
+
+          # Commit message — includes the UTC timestamp for traceability.
+          commit_message: |
+            chore(data): auto-update scraped & preprocessed data [${{ github.run_id }}]
+
+            Triggered by: ${{ github.event_name }}
+            Run at: ${{ github.run_id }} / ${{ github.sha }}
+
+          # The bot identity that appears in git log.
+          commit_user_name:  "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author:     "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
+          # Optional: skip committing if nothing changed (already the default,
+          # but explicit is better than implicit).
+          skip_dirty_check: false
+
+      # ── Step 7: Print a run summary ──────────────────────────────────────
+      # This writes a human-readable summary to the Actions "Summary" tab.
+      - name: "📊 Write job summary"
+        if: always()          # run even if a previous step failed
+        run: |
+          echo "## 🕷️ Scraper Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size / Rows |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------------|" >> $GITHUB_STEP_SUMMARY
+          for f in freelance_data.json data_before_cleaning.csv data_after_cleaning.csv; do
+            if [ -f "$f" ]; then
+              SIZE=$(wc -c < "$f")
+              echo "| \`$f\` | ${SIZE} bytes |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| \`$f\` | ❌ Not produced |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow run:** [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
