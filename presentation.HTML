@@ -10,7 +10,7 @@
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=9QpAaJZihMsXwGvWI3cnUdisczv9gI0RdGJvLGXQVK6raNZfG78zzZStsSPqnkTV7ui3pXGfNfx-0N_Qk7XNQdE0SRcOug-CDx8d8cB3eSMtHj4eVvfqaQGL-oAm5FDyxlKE6jCfRW0QwNJSKB6VFYrO0HoZQ_tozDUk-QWpS_5O_8BlJ3NU6wCuGPq20lSLQ_4MCWsbacW8ymhhXuNTmlUE_RLV8mcP37fMo9qAtgttUDMiLGO_KdUc_CgmLrmRS19dmSG2R1HjhdFK8ydrAw" charset="UTF-8"></script><style>
+    <style>
         :root {
             --navy: #0B2545;
             --navy-mid: #1B3A6B;
@@ -1073,22 +1073,14 @@
                             class="json-str">"1.0"</span><br>
                         &nbsp;&nbsp;},<br>
                         &nbsp;&nbsp;<span class="json-key">"projects"</span>: [{<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"project_id"</span>: <span
-                            class="json-str">"fl-8821934"</span>,<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"platform_source"</span>: <span
-                            class="json-str">"Freelancer.com"</span>,<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"title"</span>: <span class="json-str">"Build a
-                            REST API with Django"</span>,<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"budget_min"</span>: <span
-                            class="json-num">50.0</span>,<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"budget_max"</span>: <span
-                            class="json-num">150.0</span>,<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"budget_currency"</span>: <span
-                            class="json-str">"USD"</span>,<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"skill_tags"</span>: [<span
-                            class="json-str">"Python"</span>, <span class="json-str">"Django"</span>],<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"category"</span>: <span class="json-str">"Web
-                            Development"</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"platform"</span>: <span class="json-str">"Freelancer.com"</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"title"</span>: <span class="json-str">"Build a REST API with Django"</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"url"</span>: <span class="json-str">"https://freelancer.com/projects/..."</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"budget_min"</span>: <span class="json-num">50.0</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"budget_max"</span>: <span class="json-num">150.0</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"budget_currency"</span>: <span class="json-str">"USD"</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"skills"</span>: [<span class="json-str">"Python"</span>, <span class="json-str">"Django"</span>],<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"full_description"</span>: <span class="json-str">"Looking for an experienced dev..."</span><br>
                         &nbsp;&nbsp;}]<br>
                         }
                     </div>
@@ -1210,14 +1202,14 @@
             </div>
         </div>
 
-        <div class="slide" id="slide-6b">
+        <div class="slide" id="slide-7">
             <div class="slide-topbar"></div>
             <div class="slide-header">
                 <div>
-                    <p class="slide-tag">06b · Preprocessing Details</p>
+                    <p class="slide-tag">07 · Preprocessing Details</p>
                     <h2 class="slide-title">Real Data Transformations (Before &amp; After)</h2>
                 </div>
-                <span class="slide-number">06b</span>
+                <span class="slide-number">07</span>
             </div>
             <div class="slide-body">
                 <div class="divider"></div>
@@ -1280,14 +1272,14 @@
             </div>
         </div>
 
-        <div class="slide" id="slide-7">
+        <div class="slide" id="slide-8">
             <div class="slide-topbar"></div>
             <div class="slide-header">
                 <div>
-                    <p class="slide-tag">07 · Quality</p>
+                    <p class="slide-tag">08 · Quality</p>
                     <h2 class="slide-title">Data Quality Management</h2>
                 </div>
-                <span class="slide-number">07</span>
+                <span class="slide-number">08</span>
             </div>
             <div class="slide-body">
                 <div class="divider"></div>
@@ -1305,8 +1297,7 @@
                             <div class="tile-icon"><i class="fa-solid fa-copy"></i></div>
                             <p class="tile-title" style="font-size: 14px;">Deduplication</p>
                         </div>
-                        <p class="tile-desc">A <strong>StateManager</strong> hashes every URL. If the hash exists, the
-                            record is discarded preventing re-scrape accumulation.</p>
+                        <p class="tile-desc">A <strong>seen_urls set</strong> prevents redundant requests during scraping, and <strong>Pandas drop_duplicates</strong> ensures uniqueness by URL in preprocessing.</p>
                     </div>
                     <div class="icon-tile" style="flex-direction: column; gap: 10px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -1328,14 +1319,14 @@
             </div>
         </div>
 
-        <div class="slide" id="slide-8">
+        <div class="slide" id="slide-9">
             <div class="slide-topbar"></div>
             <div class="slide-header">
                 <div>
-                    <p class="slide-tag">08 · Analysis</p>
+                    <p class="slide-tag">09 · Analysis</p>
                     <h2 class="slide-title">Exploratory Data Analysis</h2>
                 </div>
-                <span class="slide-number">08</span>
+                <span class="slide-number">09</span>
             </div>
             <div class="slide-body">
                 <div class="divider"></div>
@@ -1399,14 +1390,14 @@
             </div>
         </div>
 
-        <div class="slide" id="slide-9">
+        <div class="slide" id="slide-10">
             <div class="slide-topbar"></div>
             <div class="slide-header">
                 <div>
-                    <p class="slide-tag">09 · Visualization</p>
+                    <p class="slide-tag">10 · Visualization</p>
                     <h2 class="slide-title">Top Demanded Skills</h2>
                 </div>
-                <span class="slide-number">09</span>
+                <span class="slide-number">10</span>
             </div>
             <div class="slide-body">
                 <div class="divider"></div>
@@ -1463,14 +1454,64 @@
             </div>
         </div>
 
-        <div class="slide" id="slide-10">
+        
+        <div class="slide" id="slide-11">
             <div class="slide-topbar"></div>
             <div class="slide-header">
                 <div>
-                    <p class="slide-tag">10 · Conclusion</p>
+                    <p class="slide-tag">11 · Core IR Concepts</p>
+                    <h2 class="slide-title">Information Retrieval Engine</h2>
+                </div>
+                <span class="slide-number">11</span>
+            </div>
+            <div class="slide-body">
+                <div class="divider"></div>
+                <div class="two-col" style="gap: 24px;">
+                    <div>
+                        <p class="section-label">Implemented Data Structures</p>
+                        <div class="check-list">
+                            <div class="check-item">
+                                <div class="icon"><i class="fa-solid fa-book-open"></i></div>
+                                <div><strong>Inverted Index:</strong> Maps each term to its Document Frequency and a Posting List of doc IDs.</div>
+                            </div>
+                            <div class="check-item">
+                                <div class="icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+                                <div><strong>Positional Index:</strong> Stores exact token offsets enabling <em>Exact Phrase Searching</em>.</div>
+                            </div>
+                            <div class="check-item">
+                                <div class="icon"><i class="fa-solid fa-table-cells"></i></div>
+                                <div><strong>TDIM (Term-Document Matrix):</strong> Binary matrix tracking presence (1) or absence (0) of terms.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="section-label">Ranking & Semantics</p>
+                        <div class="info-card">
+                            <p class="card-heading">TF-IDF Vector Space Model (VSM)</p>
+                            <p style="font-size: 13px; color: #4A5568; line-height: 1.5; margin-bottom: 12px;">
+                                Documents and queries are mapped into high-dimensional space. We compute <strong>TF-IDF scores</strong> to rank search results by relevance rather than mere keyword presence.
+                            </p>
+                            <p class="card-heading" style="margin-top: 16px;">Latent Semantic Analysis (LSA)</p>
+                            <p style="font-size: 13px; color: #4A5568; line-height: 1.5;">
+                                Applies SVD to reduce the TF-IDF matrix into semantic components, capturing <em>conceptual similarities</em> (e.g., "React" and "Frontend").
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-footer">
+                <span class="footer-brand">MSA UNIVERSITY | SHA8LNY WELNABY</span>
+                <span class="footer-course">CS313x · Information Retrieval</span>
+            </div>
+        </div>
+        <div class="slide" id="slide-12">
+            <div class="slide-topbar"></div>
+            <div class="slide-header">
+                <div>
+                    <p class="slide-tag">12 · Conclusion</p>
                     <h2 class="slide-title">Findings & Phase II Roadmap</h2>
                 </div>
-                <span class="slide-number">10</span>
+                <span class="slide-number">12</span>
             </div>
             <div class="slide-body">
                 <div class="divider"></div>
@@ -1531,14 +1572,14 @@
     <div class="slide-controls">
         <button class="ctrl-btn" id="prevBtn" onclick="changeSlide(-1)" disabled><i class="fa-solid fa-arrow-left"></i>
             Previous</button>
-        <span class="slide-counter" id="slideCounter">1 / 10</span>
+        <span class="slide-counter" id="slideCounter">1 / 12</span>
         <button class="ctrl-btn" id="nextBtn" onclick="changeSlide(1)">Next <i
                 class="fa-solid fa-arrow-right"></i></button>
     </div>
 
     <script>
         var current = 1;
-        var total = 10;
+        var total = 12;
 
         function buildNav() {
             var nav = document.getElementById('slideNav');
