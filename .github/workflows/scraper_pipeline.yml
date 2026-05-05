@@ -1,3 +1,119 @@
+dav.1910
+dav.1910
+In a call
+
+Abanob.E.Elhermeny
+ added 
+dav.1910
+ to the group. — 28/10/2025 21:14
+Abanob.E.Elhermeny
+ started a call that lasted an hour. — 28/10/2025 21:14
+Abanob.E.Elhermeny
+ started a call. — 22:53
+Abanob.E.Elhermeny
+ changed the group name: IR Project. Edit Group — 22:56
+Abanob.E.Elhermeny — 23:05
+yala ya david 5osh
+@dav.1910
+Abanob.E.Elhermeny
+ added 
+Youssef Adel
+ to the group. — 23:10
+dav.1910 — 23:15
+Image
+Youssef Adel — 23:49
+.github/workflows/scraper_pipeline.yml
+# =============================================================================
+#  .github/workflows/scraper_pipeline.yml
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+
+message.txt
+9 KB
+dav.1910 — 23:53
+Image
+Youssef Adel — 23:57
+# =============================================================================
+#  .github/workflows/scraper_pipeline.yml
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+
+message.txt
+11 KB
+dav.1910 — 00:01
+Image
+Youssef Adel — 00:04
+# =============================================================================
+#  .github/workflows/scraper_pipeline.yml
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+
+message.txt
+6 KB
+Abanob.E.Elhermeny — 00:26
+Fils de pute
+dav.1910 — 00:28
+Image
+Youssef Adel — 00:34
+"""
+=============================================================================
+ Sha8lny Welnaby — Freelance Market Explorer + IR Strategies Dashboard
+ File  : eda_app.py
+ Stack : Streamlit · Pandas · Plotly · scikit-learn
+ Input : freelance_data.json  (scraper.py)
+
+eda_app.py
+49 KB
+"""
+=============================================================================
+ preprocess.py  —  IR Text Processing Pipeline
+ Course  : CS313x Information Retrieval
+ Project : Freelance Market Monitor (Sha8lny Welnaby)
+=============================================================================
+
+preprocess.py
+15 KB
+Attachment file type: webcode
+presentation.HTML
+69.78 KB
+"""
+=============================================================================
+ Freelance Market Monitor — Web Scraper  [DEEP CRAWLING VERSION]
+ Course   : CS313x Information Retrieval
+ Project  : Freelance Market Monitor
+ Platforms: Freelancer.com  +  Mostaqel.com... (7 KB left)
+
+scraper_ManeualSubmission.py
+57 KB
+# =============================================================================
+#  .github/workflows/scraper_pipeline.yml
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+
+scraper_pipeline.yml
+5 KB
+.github/workflows/scraper_pipeline.yml
+dav.1910 — 00:40
+Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true
+Youssef Adel — 00:42
+# =============================================================================
+#  .github/workflows/scraper_pipeline.yml
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+
+message.txt
+12 KB
+﻿
 # =============================================================================
 #  .github/workflows/scraper_pipeline.yml
 #  Project : Freelance Market Monitor (Sha8lny Welnaby)
@@ -8,20 +124,47 @@
 #  -----------------------
 #  1. Runs on a schedule (every 3 days at midnight UTC) OR on manual trigger.
 #  2. Sets up Python 3.10 on ubuntu-latest.
-#  3. Installs all required dependencies (Scraping, NLP, and EDA).
+#  3. Installs all required dependencies.
 #  4. Runs the scraper   → produces freelance_data.json
-#  5. Runs preprocessor  → produces data_before_cleaning.csv & data_after_cleaning.csv
-#  6. Verifies eda_app.py builds correctly with the new data.
-#  7. Commits & pushes all three output files back to the repository.
-#     (This automatically updates the Streamlit EDA App if deployed on Streamlit Cloud!)
+#  5. Runs preprocessor  → produces data_before_cleaning.csv
+#                                    data_after_cleaning.csv
+#  6. Commits & pushes all three output files back to the repository.
 #
+#  FIXES APPLIED (v2)
+#  ------------------
+#  - Pinned actions to Node.js 22 compatible versions (v4.2.2 / v5.3.0)
+#    to eliminate the "Node.js 20 deprecated" warning.
+#  - Added explicit --input and --output-dir flags to the preprocessor call
+#    so it always finds freelance_data.json regardless of working directory.
+#  - Added full workspace debug listing before both script runs so future
+#    failures are easy to diagnose from the log.
+#  - Added `defaults.run.working-directory` pin on all shell steps to
+#    guarantee a consistent CWD across every run.
+#
+#  FIXES APPLIED (v3)
+#  ------------------
+#  - Added FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true at the workflow env level.
+#    GitHub is migrating from Node.js 20 → 24 for action runners. Setting
+#    this env variable opts the entire workflow into Node.js 24 immediately,
+#    silencing the deprecation warning and future-proofing the pipeline.
+#  - Upgraded stefanzweifel/git-auto-commit-action to @v6 which ships with
+#    native Node.js 24 support (v5 still runs on Node.js 20).
 # =============================================================================
 
 name: Scraper & IR Preprocessing Pipeline
 
+# ---------------------------------------------------------------------------
+# TRIGGER CONFIGURATION
+# ---------------------------------------------------------------------------
 on:
+
+  # ── Scheduled trigger: every 3 days at midnight UTC ──────────────────────
+  # Cron syntax:  minute  hour  day-of-month  month  day-of-week
+  # "0 0 */3 * *" = at 00:00 UTC, every 3rd day of the month.
   schedule:
     - cron: "0 0 */3 * *"
+
+  # ── Manual trigger: lets you click "Run workflow" in the GitHub UI ────────
   workflow_dispatch:
     inputs:
       reason:
@@ -29,93 +172,180 @@ on:
         required: false
         default: "Manual run"
 
+# ---------------------------------------------------------------------------
+# PERMISSIONS
+# ---------------------------------------------------------------------------
+# Give GITHUB_TOKEN write access so the bot can commit & push data files.
 permissions:
   contents: write
 
+# ---------------------------------------------------------------------------
+# ENVIRONMENT VARIABLES (workflow-wide)
+# ---------------------------------------------------------------------------
+# FIX (v3): GitHub is deprecating Node.js 20 for action runners and moving
+# to Node.js 24. Setting this flag opts the ENTIRE workflow into Node.js 24
+# now, which eliminates the deprecation warning on ALL actions (checkout,
+# setup-python, git-auto-commit, etc.) without waiting for each action
+# maintainer to release a new version.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+# ---------------------------------------------------------------------------
+# JOBS
+# ---------------------------------------------------------------------------
 jobs:
+
   scrape-and-preprocess:
+
     runs-on: ubuntu-latest
+
+    # Deep-crawling with polite_sleep() is slow — 60 min prevents runaway bills.
     timeout-minutes: 60
 
+    # FIX: Pin every shell step's CWD to the repo root explicitly.
+    # This was the root cause of exit code 2 — the preprocessor could not
+    # find freelance_data.json because it was running from a different directory.
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
     steps:
+
+      # ── Step 1: Checkout ─────────────────────────────────────────────────
+      # Node.js 24 is handled at the workflow env level (FORCE_JAVASCRIPT_ACTIONS_TO_NODE24).
+      # fetch-depth: 0 gives full git history so the bot can push later.
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
+      # ── Step 2: Set up Python 3.10 ───────────────────────────────────────
+      # Node.js 24 is handled at the workflow env level (FORCE_JAVASCRIPT_ACTIONS_TO_NODE24).
       - name: "🐍 Set up Python 3.10"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.10"
           cache: "pip"
 
+      # ── Step 3: Install dependencies ─────────────────────────────────────
+      # Exact packages imported by both scripts:
+      #   requests       — HTTP client used in the scraper
+      #   beautifulsoup4 — HTML parser (BS4)
+      #   lxml           — fast BS4 backend parser
+      #   pandas         — DataFrame used in preprocess.py
       - name: "📦 Install Python dependencies"
         run: |
           python -m pip install --upgrade pip
-          # Scraper & Preprocessor dependencies
           pip install requests beautifulsoup4 lxml pandas
-          # EDA App dependencies (to ensure it compiles and is ready for deployment)
-          pip install streamlit plotly scikit-learn
 
+      # ── Step 4: Debug — list workspace before scraping ───────────────────
+      # Prints every .py file found so you can confirm the script names match.
+      # If your script is named differently, you will see it here in the log.
+      - name: "🔍 Debug — list workspace contents"
+        run: |
+          echo "════════════════════════════════════════"
+          echo "  Working directory : $(pwd)"
+          echo "════════════════════════════════════════"
+          echo "▶ Python scripts found:"
+          ls -1 *.py 2>/dev/null || echo "  (no .py files in root — check your repo structure!)"
+          echo ""
+          echo "▶ Full workspace listing:"
+          ls -la
+
+      # ── Step 5: Run the scraper ───────────────────────────────────────────
+      # Outputs freelance_data.json into the workspace root.
+      # Hard-fails if JSON is missing so we never preprocess stale/empty data.
       - name: "🕷️  Run scraper (Deep Crawl)"
         run: |
           echo "▶ Starting scraper at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          python scraper_ManeualSubmission.py
-          echo "✅ Scraper finished. Checking output..."
-          if [ ! -f freelance_data.json ]; then
-            echo "❌ ERROR: freelance_data.json was not created by the scraper."
+          python scraper_ManeualSubmission_3.py
+          echo ""
+          echo "▶ Workspace after scraper:"
+          ls -la
+          echo ""
+          if [ ! -f "${{ github.workspace }}/freelance_data.json" ]; then
+            echo "❌ ERROR: freelance_data.json was not created."
+            echo "   Possible reasons:"
+            echo "   • The scraper script name doesn't match (check Step 4 log)"
+            echo "   • Both target sites blocked the runner's IP"
+            echo "   • The script crashed — read the Python traceback above"
             exit 1
           fi
-          echo "📄 freelance_data.json size: $(wc -c < freelance_data.json) bytes"
+          echo "✅ freelance_data.json — $(wc -c < freelance_data.json) bytes"
 
+      # ── Step 6: Run the IR preprocessing pipeline ────────────────────────
+      # FIX: Pass --input and --output-dir explicitly with full absolute paths.
+      # Previously the script was called with no arguments and relied on the
+      # default "freelance_data.json" filename — which failed (exit code 2)
+      # whenever the CWD differed from where the JSON was written.
       - name: "🔬 Run IR preprocessing pipeline"
         run: |
           echo "▶ Starting preprocessor at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          python preprocess.py
-          echo "✅ Preprocessor finished. Checking outputs..."
+          python preprocess_3.py \
+            --input      "${{ github.workspace }}/freelance_data.json" \
+            --output-dir "${{ github.workspace }}"
+          echo ""
+          echo "▶ CSV files after preprocessor:"
+          ls -la *.csv 2>/dev/null || echo "  (no CSV files found)"
+          echo ""
+          # Hard-fail if either CSV is missing.
+          MISSING=0
           for f in data_before_cleaning.csv data_after_cleaning.csv; do
-            if [ ! -f "$f" ]; then
-              echo "❌ ERROR: $f was not produced by the preprocessor."
-              exit 1
+            if [ ! -f "${{ github.workspace }}/$f" ]; then
+              echo "❌ ERROR: $f was not produced."
+              MISSING=1
+            else
+              echo "✅ $f — $(wc -l < $f) rows"
             fi
-            echo "📄 $f → $(wc -l < $f) rows"
           done
+          if [ "$MISSING" -eq 1 ]; then
+            exit 1
+          fi
 
-      - name: "🧪 Verify EDA App (Syntax & Imports)"
-        run: |
-          echo "▶ Verifying eda_app.py compiles successfully..."
-          python -m py_compile eda_app.py
-          echo "✅ eda_app.py compiled successfully."
-
+      # ── Step 7: Commit & push all data files ─────────────────────────────
+      # Idempotent: if files are unchanged since last commit, nothing is pushed.
       - name: "💾 Commit and push data files"
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
-          file_pattern: "freelance_data.json data_before_cleaning.csv data_after_cleaning.csv"
+          file_pattern: >-
+            freelance_data.json
+            data_before_cleaning.csv
+            data_after_cleaning.csv
+
           commit_message: |
             chore(data): auto-update scraped & preprocessed data [${{ github.run_id }}]
 
-            Triggered by: ${{ github.event_name }}
-            Run at: ${{ github.run_id }} / ${{ github.sha }}
+            Triggered by : ${{ github.event_name }}
+            Workflow run : ${{ github.run_id }}
+            Commit SHA   : ${{ github.sha }}
+
           commit_user_name:  "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
           commit_author:     "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-          skip_dirty_check: false
+          skip_dirty_check:  false
 
+      # ── Step 8: Write run summary ─────────────────────────────────────────
+      # `if: always()` ensures this runs even when a previous step fails,
+      # so you always get a diagnostic table in the Actions Summary tab.
       - name: "📊 Write job summary"
         if: always()
         run: |
           echo "## 🕷️ Scraper Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| File | Size / Rows |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Status | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|------|" >> $GITHUB_STEP_SUMMARY
           for f in freelance_data.json data_before_cleaning.csv data_after_cleaning.csv; do
-            if [ -f "$f" ]; then
-              SIZE=$(wc -c < "$f")
-              echo "| \`$f\` | ${SIZE} bytes |" >> $GITHUB_STEP_SUMMARY
+            if [ -f "${{ github.workspace }}/$f" ]; then
+              SIZE=$(wc -c < "${{ github.workspace }}/$f")
+              ROWS=""
+              [[ "$f" == *.csv ]] && ROWS=" / $(wc -l < "${{ github.workspace }}/$f") rows"
+              echo "| \`$f\` | ✅ Produced | ${SIZE} bytes${ROWS} |" >> $GITHUB_STEP_SUMMARY
             else
-              echo "| \`$f\` | ❌ Not produced |" >> $GITHUB_STEP_SUMMARY
+              echo "| \`$f\` | ❌ Not produced | — |" >> $GITHUB_STEP_SUMMARY
             fi
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Workflow run:** [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Workspace: \`${{ github.workspace }}\`_" >> $GITHUB_STEP_SUMMARY
