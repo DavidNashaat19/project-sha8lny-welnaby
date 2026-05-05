@@ -126,7 +126,7 @@ jobs:
           echo ""
 
           # Run with unbuffered output so tracebacks appear in real time
-          python -u scraper_ManeualSubmission_3.py
+          python -u scraper_ManeualSubmission.py
 
           echo ""
           echo "▶ Workspace after scraper:"
@@ -185,7 +185,7 @@ jobs:
           echo ""
 
           # Run preprocessor — all stdout/stderr visible thanks to PYTHONUNBUFFERED
-          python -u preprocess_3.py \
+          python -u preprocess.py \
             --input      "$WS/freelance_data.json" \
             --output-dir "$WS"
 
