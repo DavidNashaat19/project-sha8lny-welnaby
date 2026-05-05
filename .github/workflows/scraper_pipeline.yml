@@ -18,7 +18,7 @@
 #    passing it to the preprocessor — eliminates any CWD ambiguity.
 #  - Added `head` preview of the JSON so you can confirm it has real data
 #    (not an empty projects array) before the preprocessor runs.
-#  - Upgraded to actions/checkout@v4.2.2 and actions/setup-python@v5.4.0
+#  - Upgraded to actions/checkout@v6 and actions/setup-python@v6
 #    which have Node.js 24 native support.
 #  - Upgraded stefanzweifel/git-auto-commit-action to @v6.
 # =============================================================================
@@ -78,7 +78,7 @@ jobs:
 
       # ── Step 1: Checkout ─────────────────────────────────────────────────
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -87,7 +87,7 @@ jobs:
       # intermittently, which causes a workflow warning and slows down the run.
       # Without it, `pip install` takes ~15 extra seconds but is 100% reliable.
       - name: "🐍 Set up Python 3.10"
-        uses: actions/setup-python@v5.4.0
+        uses: actions/setup-python@v6
         with:
           python-version: "3.10"
 
