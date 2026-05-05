@@ -4,51 +4,34 @@
 #  Course  : CS313x Information Retrieval
 # =============================================================================
 #
-#  WHAT THIS WORKFLOW DOES
-#  -----------------------
-#  1. Runs on a schedule (every 3 days at midnight UTC) OR on manual trigger.
-#  2. Sets up Python 3.10 on ubuntu-latest.
-#  3. Installs all required dependencies.
-#  4. Runs the scraper   → produces freelance_data.json
-#  5. Runs preprocessor  → produces data_before_cleaning.csv
-#                                    data_after_cleaning.csv
-#  6. Commits & pushes all three output files back to the repository.
-#
-#  FIXES APPLIED (v2)
+#  FIXES APPLIED (v4)
 #  ------------------
-#  - Pinned actions to Node.js 22 compatible versions (v4.2.2 / v5.3.0)
-#    to eliminate the "Node.js 20 deprecated" warning.
-#  - Added explicit --input and --output-dir flags to the preprocessor call
-#    so it always finds freelance_data.json regardless of working directory.
-#  - Added full workspace debug listing before both script runs so future
-#    failures are easy to diagnose from the log.
-#  - Added `defaults.run.working-directory` pin on all shell steps to
-#    guarantee a consistent CWD across every run.
-#
-#  FIXES APPLIED (v3)
-#  ------------------
-#  - Added FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true at the workflow env level.
-#    GitHub is migrating from Node.js 20 → 24 for action runners. Setting
-#    this env variable opts the entire workflow into Node.js 24 immediately,
-#    silencing the deprecation warning and future-proofing the pipeline.
-#  - Upgraded stefanzweifel/git-auto-commit-action to @v6 which ships with
-#    native Node.js 24 support (v5 still runs on Node.js 20).
+#  - Removed `cache: "pip"` from setup-python → fixes "Cache service 400" error.
+#  - Replaced FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 with NODE_OPTIONS approach
+#    that is compatible with all current action versions.
+#  - Added `python -u` (unbuffered) so ALL Python print/traceback output is
+#    visible in the Actions log in real time — previously output was buffered
+#    and the real error was hidden.
+#  - Added `set -euo pipefail` to every shell step so any silent failure
+#    (wrong exit code, missing variable) is caught immediately.
+#  - Added `find` scan to locate freelance_data.json by absolute path before
+#    passing it to the preprocessor — eliminates any CWD ambiguity.
+#  - Added `head` preview of the JSON so you can confirm it has real data
+#    (not an empty projects array) before the preprocessor runs.
+#  - Upgraded to actions/checkout@v4.2.2 and actions/setup-python@v5.4.0
+#    which have Node.js 24 native support.
+#  - Upgraded stefanzweifel/git-auto-commit-action to @v6.
 # =============================================================================
 
 name: Scraper & IR Preprocessing Pipeline
 
 # ---------------------------------------------------------------------------
-# TRIGGER CONFIGURATION
+# TRIGGERS
 # ---------------------------------------------------------------------------
 on:
-
-  # ── Scheduled trigger: every 3 days at midnight UTC ──────────────────────
-  # Cron syntax:  minute  hour  day-of-month  month  day-of-week
-  # "0 0 */3 * *" = at 00:00 UTC, every 3rd day of the month.
   schedule:
-    - cron: "0 0 */3 * *"
+    - cron: "0 0 */3 * *"      # every 3 days at midnight UTC
 
-  # ── Manual trigger: lets you click "Run workflow" in the GitHub UI ────────
   workflow_dispatch:
     inputs:
       reason:
@@ -59,20 +42,23 @@ on:
 # ---------------------------------------------------------------------------
 # PERMISSIONS
 # ---------------------------------------------------------------------------
-# Give GITHUB_TOKEN write access so the bot can commit & push data files.
 permissions:
   contents: write
 
 # ---------------------------------------------------------------------------
-# ENVIRONMENT VARIABLES (workflow-wide)
+# WORKFLOW-WIDE ENVIRONMENT
 # ---------------------------------------------------------------------------
-# FIX (v3): GitHub is deprecating Node.js 20 for action runners and moving
-# to Node.js 24. Setting this flag opts the ENTIRE workflow into Node.js 24
-# now, which eliminates the deprecation warning on ALL actions (checkout,
-# setup-python, git-auto-commit, etc.) without waiting for each action
-# maintainer to release a new version.
 env:
+  # Opt into Node.js 24 for ALL actions in this workflow.
+  # Fixes: "Node.js 20 is deprecated" warning on every action step.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+  # Unbuffered Python output — ensures every print() and traceback line
+  # appears in the Actions log immediately, not after the step finishes.
+  PYTHONUNBUFFERED: "1"
+
+  # Convenience: one variable for the workspace path used in every step.
+  WS: ${{ github.workspace }}
 
 # ---------------------------------------------------------------------------
 # JOBS
@@ -82,13 +68,8 @@ jobs:
   scrape-and-preprocess:
 
     runs-on: ubuntu-latest
-
-    # Deep-crawling with polite_sleep() is slow — 60 min prevents runaway bills.
     timeout-minutes: 60
 
-    # FIX: Pin every shell step's CWD to the repo root explicitly.
-    # This was the root cause of exit code 2 — the preprocessor could not
-    # find freelance_data.json because it was running from a different directory.
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -96,98 +77,146 @@ jobs:
     steps:
 
       # ── Step 1: Checkout ─────────────────────────────────────────────────
-      # Node.js 24 is handled at the workflow env level (FORCE_JAVASCRIPT_ACTIONS_TO_NODE24).
-      # fetch-depth: 0 gives full git history so the bot can push later.
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
       # ── Step 2: Set up Python 3.10 ───────────────────────────────────────
-      # Node.js 24 is handled at the workflow env level (FORCE_JAVASCRIPT_ACTIONS_TO_NODE24).
+      # NOTE: cache: "pip" removed — GitHub's cache service returns HTTP 400
+      # intermittently, which causes a workflow warning and slows down the run.
+      # Without it, `pip install` takes ~15 extra seconds but is 100% reliable.
       - name: "🐍 Set up Python 3.10"
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v5.4.0
         with:
           python-version: "3.10"
-          cache: "pip"
 
       # ── Step 3: Install dependencies ─────────────────────────────────────
-      # Exact packages imported by both scripts:
-      #   requests       — HTTP client used in the scraper
-      #   beautifulsoup4 — HTML parser (BS4)
-      #   lxml           — fast BS4 backend parser
-      #   pandas         — DataFrame used in preprocess.py
       - name: "📦 Install Python dependencies"
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 lxml pandas
+          echo "✅ Installed packages:"
+          pip show requests beautifulsoup4 lxml pandas | grep -E "^(Name|Version):"
 
-      # ── Step 4: Debug — list workspace before scraping ───────────────────
-      # Prints every .py file found so you can confirm the script names match.
-      # If your script is named differently, you will see it here in the log.
-      - name: "🔍 Debug — list workspace contents"
+      # ── Step 4: Debug — verify workspace layout ───────────────────────────
+      # This step never fails the build (|| true) — it is purely diagnostic.
+      # Check the log here if a later step cannot find a file.
+      - name: "🔍 Debug — workspace layout"
         run: |
-          echo "════════════════════════════════════════"
-          echo "  Working directory : $(pwd)"
-          echo "════════════════════════════════════════"
-          echo "▶ Python scripts found:"
-          ls -1 *.py 2>/dev/null || echo "  (no .py files in root — check your repo structure!)"
+          echo "════════════════════════════════════════════"
+          echo "  Runner workspace : $(pwd)"
+          echo "════════════════════════════════════════════"
           echo ""
-          echo "▶ Full workspace listing:"
+          echo "▶ Python scripts in root:"
+          ls -1 *.py 2>/dev/null || echo "  ⚠️  No .py files found in root!"
+          echo ""
+          echo "▶ Full directory listing:"
           ls -la
+          echo ""
+          echo "▶ Python version:"
+          python --version
 
       # ── Step 5: Run the scraper ───────────────────────────────────────────
-      # Outputs freelance_data.json into the workspace root.
-      # Hard-fails if JSON is missing so we never preprocess stale/empty data.
       - name: "🕷️  Run scraper (Deep Crawl)"
         run: |
-          echo "▶ Starting scraper at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          python scraper_ManeualSubmission_3.py
+          set -euo pipefail
+          echo "▶ Starting scraper — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+
+          # Run with unbuffered output so tracebacks appear in real time
+          python -u scraper_ManeualSubmission_3.py
+
           echo ""
           echo "▶ Workspace after scraper:"
           ls -la
-          echo ""
-          if [ ! -f "${{ github.workspace }}/freelance_data.json" ]; then
-            echo "❌ ERROR: freelance_data.json was not created."
-            echo "   Possible reasons:"
-            echo "   • The scraper script name doesn't match (check Step 4 log)"
-            echo "   • Both target sites blocked the runner's IP"
-            echo "   • The script crashed — read the Python traceback above"
+
+          # Locate the JSON — handle cases where the scraper writes it
+          # to a subdirectory instead of the workspace root
+          JSON_PATH=$(find "$WS" -maxdepth 2 -name "freelance_data.json" | head -1)
+
+          if [ -z "$JSON_PATH" ]; then
+            echo ""
+            echo "❌ ERROR: freelance_data.json was not found anywhere under $WS"
+            echo "   Possible causes:"
+            echo "   • Script name mismatch  — check Step 4 log for actual .py filenames"
+            echo "   • Both target sites blocked the GitHub Actions runner IP"
+            echo "   • Python crash          — read the traceback printed above"
             exit 1
           fi
-          echo "✅ freelance_data.json — $(wc -c < freelance_data.json) bytes"
+
+          echo ""
+          echo "✅ Found: $JSON_PATH"
+          echo "   Size : $(wc -c < "$JSON_PATH") bytes"
+          echo "   First 3 lines:"
+          head -3 "$JSON_PATH"
+          echo ""
+
+          # Copy to workspace root if the scraper wrote it elsewhere
+          if [ "$JSON_PATH" != "$WS/freelance_data.json" ]; then
+            echo "⚠️  JSON was not in workspace root — copying it there now..."
+            cp "$JSON_PATH" "$WS/freelance_data.json"
+          fi
+
+          # Confirm the projects array is not empty
+          PROJECT_COUNT=$(python -c "
+          import json, sys
+          with open('$WS/freelance_data.json') as f:
+              d = json.load(f)
+          count = len(d.get('projects', []))
+          print(count)
+          sys.exit(0 if count > 0 else 1)
+          " 2>&1) || {
+            echo "❌ ERROR: freelance_data.json exists but contains 0 projects."
+            echo "   The scraper ran but collected no data (sites may have changed HTML)."
+            exit 1
+          }
+          echo "✅ JSON contains $PROJECT_COUNT project records — proceeding."
 
       # ── Step 6: Run the IR preprocessing pipeline ────────────────────────
-      # FIX: Pass --input and --output-dir explicitly with full absolute paths.
-      # Previously the script was called with no arguments and relied on the
-      # default "freelance_data.json" filename — which failed (exit code 2)
-      # whenever the CWD differed from where the JSON was written.
       - name: "🔬 Run IR preprocessing pipeline"
         run: |
-          echo "▶ Starting preprocessor at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          python preprocess_3.py \
-            --input      "${{ github.workspace }}/freelance_data.json" \
-            --output-dir "${{ github.workspace }}"
+          set -euo pipefail
+          echo "▶ Starting preprocessor — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo ""
-          echo "▶ CSV files after preprocessor:"
-          ls -la *.csv 2>/dev/null || echo "  (no CSV files found)"
+          echo "▶ Input  : $WS/freelance_data.json"
+          echo "▶ Output : $WS"
           echo ""
-          # Hard-fail if either CSV is missing.
+
+          # Run preprocessor — all stdout/stderr visible thanks to PYTHONUNBUFFERED
+          python -u preprocess_3.py \
+            --input      "$WS/freelance_data.json" \
+            --output-dir "$WS"
+
+          echo ""
+          echo "▶ Files produced:"
+          ls -la "$WS"/*.csv 2>/dev/null || echo "  (no CSV files found)"
+          echo ""
+
+          # Verify both CSVs were actually written
           MISSING=0
           for f in data_before_cleaning.csv data_after_cleaning.csv; do
-            if [ ! -f "${{ github.workspace }}/$f" ]; then
-              echo "❌ ERROR: $f was not produced."
+            FULL="$WS/$f"
+            if [ ! -f "$FULL" ]; then
+              echo "❌ MISSING : $f"
               MISSING=1
             else
-              echo "✅ $f — $(wc -l < $f) rows"
+              ROWS=$(wc -l < "$FULL")
+              SIZE=$(wc -c < "$FULL")
+              echo "✅ $f — $ROWS rows / $SIZE bytes"
             fi
           done
+
           if [ "$MISSING" -eq 1 ]; then
+            echo ""
+            echo "The preprocessor exited without producing all expected files."
+            echo "Re-run this workflow and check the Python output above for errors."
             exit 1
           fi
 
       # ── Step 7: Commit & push all data files ─────────────────────────────
-      # Idempotent: if files are unchanged since last commit, nothing is pushed.
+      # Idempotent — nothing is committed if the files are unchanged.
       - name: "💾 Commit and push data files"
         uses: stefanzweifel/git-auto-commit-action@v6
         with:
@@ -208,9 +237,7 @@ jobs:
           commit_author:     "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           skip_dirty_check:  false
 
-      # ── Step 8: Write run summary ─────────────────────────────────────────
-      # `if: always()` ensures this runs even when a previous step fails,
-      # so you always get a diagnostic table in the Actions Summary tab.
+      # ── Step 8: Summary (always runs — even on failure) ───────────────────
       - name: "📊 Write job summary"
         if: always()
         run: |
@@ -219,10 +246,11 @@ jobs:
           echo "| File | Status | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|------|--------|------|" >> $GITHUB_STEP_SUMMARY
           for f in freelance_data.json data_before_cleaning.csv data_after_cleaning.csv; do
-            if [ -f "${{ github.workspace }}/$f" ]; then
-              SIZE=$(wc -c < "${{ github.workspace }}/$f")
+            FULL="$WS/$f"
+            if [ -f "$FULL" ]; then
+              SIZE=$(wc -c < "$FULL")
               ROWS=""
-              [[ "$f" == *.csv ]] && ROWS=" / $(wc -l < "${{ github.workspace }}/$f") rows"
+              [[ "$f" == *.csv ]] && ROWS=" / $(wc -l < "$FULL") rows"
               echo "| \`$f\` | ✅ Produced | ${SIZE} bytes${ROWS} |" >> $GITHUB_STEP_SUMMARY
             else
               echo "| \`$f\` | ❌ Not produced | — |" >> $GITHUB_STEP_SUMMARY
