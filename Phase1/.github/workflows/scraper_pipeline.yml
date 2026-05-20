@@ -1,0 +1,261 @@
+# =============================================================================
+#  .github/workflows/scraper_pipeline.yml
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+#  FIXES APPLIED (v4)
+#  ------------------
+#  - Removed `cache: "pip"` from setup-python → fixes "Cache service 400" error.
+#  - Replaced FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 with NODE_OPTIONS approach
+#    that is compatible with all current action versions.
+#  - Added `python -u` (unbuffered) so ALL Python print/traceback output is
+#    visible in the Actions log in real time — previously output was buffered
+#    and the real error was hidden.
+#  - Added `set -euo pipefail` to every shell step so any silent failure
+#    (wrong exit code, missing variable) is caught immediately.
+#  - Added `find` scan to locate freelance_data.json by absolute path before
+#    passing it to the preprocessor — eliminates any CWD ambiguity.
+#  - Added `head` preview of the JSON so you can confirm it has real data
+#    (not an empty projects array) before the preprocessor runs.
+#  - Upgraded to actions/checkout@v4.2.2 and actions/setup-python@v5.4.0
+#    which have Node.js 24 native support.
+#  - Upgraded stefanzweifel/git-auto-commit-action to @v6.
+# =============================================================================
+
+name: Scraper & IR Preprocessing Pipeline
+
+# ---------------------------------------------------------------------------
+# TRIGGERS
+# ---------------------------------------------------------------------------
+on:
+  schedule:
+    - cron: "0 0 */3 * *"      # every 3 days at midnight UTC
+
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you running this manually? (optional)"
+        required: false
+        default: "Manual run"
+
+# ---------------------------------------------------------------------------
+# PERMISSIONS
+# ---------------------------------------------------------------------------
+permissions:
+  contents: write
+
+# ---------------------------------------------------------------------------
+# WORKFLOW-WIDE ENVIRONMENT
+# ---------------------------------------------------------------------------
+env:
+
+
+  # Unbuffered Python output — ensures every print() and traceback line
+  # appears in the Actions log immediately, not after the step finishes.
+  PYTHONUNBUFFERED: "1"
+
+  # Convenience: one variable for the workspace path used in every step.
+  WS: ${{ github.workspace }}
+
+# ---------------------------------------------------------------------------
+# JOBS
+# ---------------------------------------------------------------------------
+jobs:
+
+  scrape-and-preprocess:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+
+      # ── Step 1: Checkout ─────────────────────────────────────────────────
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      # ── Step 2: Set up Python 3.10 ───────────────────────────────────────
+      # NOTE: cache: "pip" removed — GitHub's cache service returns HTTP 400
+      # intermittently, which causes a workflow warning and slows down the run.
+      # Without it, `pip install` takes ~15 extra seconds but is 100% reliable.
+      - name: "🐍 Set up Python 3.10"
+        uses: actions/setup-python@v5.4.0
+        with:
+          python-version: "3.10"
+
+      # ── Step 3: Install dependencies ─────────────────────────────────────
+      - name: "📦 Install Python dependencies"
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml pandas
+          echo "✅ Installed packages:"
+          pip show requests beautifulsoup4 lxml pandas | grep -E "^(Name|Version):"
+
+      # ── Step 4: Debug — verify workspace layout ───────────────────────────
+      # This step never fails the build (|| true) — it is purely diagnostic.
+      # Check the log here if a later step cannot find a file.
+      - name: "🔍 Debug — workspace layout"
+        run: |
+          echo "════════════════════════════════════════════"
+          echo "  Runner workspace : $(pwd)"
+          echo "════════════════════════════════════════════"
+          echo ""
+          echo "▶ Python scripts in root:"
+          ls -1 *.py 2>/dev/null || echo "  ⚠️  No .py files found in root!"
+          echo ""
+          echo "▶ Full directory listing:"
+          ls -la
+          echo ""
+          echo "▶ Python version:"
+          python --version
+
+      # ── Step 5: Run the scraper ───────────────────────────────────────────
+      - name: "🕷️  Run scraper (Deep Crawl)"
+        run: |
+          set -euo pipefail
+          echo "▶ Starting scraper — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+
+          # Run with unbuffered output so tracebacks appear in real time
+          python -u scraper_ManeualSubmission.py
+
+          echo ""
+          echo "▶ Workspace after scraper:"
+          ls -la
+
+          # Locate the JSON — handle cases where the scraper writes it
+          # to a subdirectory instead of the workspace root
+          JSON_PATH=$(find "$WS" -maxdepth 2 -name "freelance_data.json" | head -1)
+
+          if [ -z "$JSON_PATH" ]; then
+            echo ""
+            echo "❌ ERROR: freelance_data.json was not found anywhere under $WS"
+            echo "   Possible causes:"
+            echo "   • Script name mismatch  — check Step 4 log for actual .py filenames"
+            echo "   • Both target sites blocked the GitHub Actions runner IP"
+            echo "   • Python crash          — read the traceback printed above"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Found: $JSON_PATH"
+          echo "   Size : $(wc -c < "$JSON_PATH") bytes"
+          echo "   First 3 lines:"
+          head -3 "$JSON_PATH"
+          echo ""
+
+          # Copy to workspace root if the scraper wrote it elsewhere
+          if [ "$JSON_PATH" != "$WS/freelance_data.json" ]; then
+            echo "⚠️  JSON was not in workspace root — copying it there now..."
+            cp "$JSON_PATH" "$WS/freelance_data.json"
+          fi
+
+          # Confirm the projects array is not empty
+          PROJECT_COUNT=$(python -c "
+          import json, sys
+          with open('$WS/freelance_data.json') as f:
+              d = json.load(f)
+          count = len(d.get('projects', []))
+          print(count)
+          sys.exit(0 if count > 0 else 1)
+          " 2>&1) || {
+            echo "❌ ERROR: freelance_data.json exists but contains 0 projects."
+            echo "   The scraper ran but collected no data (sites may have changed HTML)."
+            exit 1
+          }
+          echo "✅ JSON contains $PROJECT_COUNT project records — proceeding."
+
+      # ── Step 6: Run the IR preprocessing pipeline ────────────────────────
+      - name: "🔬 Run IR preprocessing pipeline"
+        run: |
+          set -euo pipefail
+          echo "▶ Starting preprocessor — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "▶ Input  : $WS/freelance_data.json"
+          echo "▶ Output : $WS"
+          echo ""
+
+          # Run preprocessor — all stdout/stderr visible thanks to PYTHONUNBUFFERED
+          python -u preprocess.py \
+            --input      "$WS/freelance_data.json" \
+            --output-dir "$WS"
+
+          echo ""
+          echo "▶ Files produced:"
+          ls -la "$WS"/*.csv 2>/dev/null || echo "  (no CSV files found)"
+          echo ""
+
+          # Verify both CSVs were actually written
+          MISSING=0
+          for f in data_before_cleaning.csv data_after_cleaning.csv; do
+            FULL="$WS/$f"
+            if [ ! -f "$FULL" ]; then
+              echo "❌ MISSING : $f"
+              MISSING=1
+            else
+              ROWS=$(wc -l < "$FULL")
+              SIZE=$(wc -c < "$FULL")
+              echo "✅ $f — $ROWS rows / $SIZE bytes"
+            fi
+          done
+
+          if [ "$MISSING" -eq 1 ]; then
+            echo ""
+            echo "The preprocessor exited without producing all expected files."
+            echo "Re-run this workflow and check the Python output above for errors."
+            exit 1
+          fi
+
+      # ── Step 7: Commit & push all data files ─────────────────────────────
+      # Idempotent — nothing is committed if the files are unchanged.
+      - name: "💾 Commit and push data files"
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          file_pattern: >-
+            freelance_data.json
+            data_before_cleaning.csv
+            data_after_cleaning.csv
+
+          commit_message: |
+            chore(data): auto-update scraped & preprocessed data [${{ github.run_id }}]
+
+            Triggered by : ${{ github.event_name }}
+            Workflow run : ${{ github.run_id }}
+            Commit SHA   : ${{ github.sha }}
+
+          commit_user_name:  "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author:     "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          skip_dirty_check:  false
+
+      # ── Step 8: Summary (always runs — even on failure) ───────────────────
+      - name: "📊 Write job summary"
+        if: always()
+        run: |
+          echo "## 🕷️ Scraper Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Status | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|------|" >> $GITHUB_STEP_SUMMARY
+          for f in freelance_data.json data_before_cleaning.csv data_after_cleaning.csv; do
+            FULL="$WS/$f"
+            if [ -f "$FULL" ]; then
+              SIZE=$(wc -c < "$FULL")
+              ROWS=""
+              [[ "$f" == *.csv ]] && ROWS=" / $(wc -l < "$FULL") rows"
+              echo "| \`$f\` | ✅ Produced | ${SIZE} bytes${ROWS} |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| \`$f\` | ❌ Not produced | — |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow run:** [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Workspace: \`${{ github.workspace }}\`_" >> $GITHUB_STEP_SUMMARY

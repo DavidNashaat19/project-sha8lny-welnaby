@@ -1,0 +1,5 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/phase2/venv/Scripts/python.exe",
+    "css.validate": false,
+    "tailwindCSS.experimental.configFile": "phase2/frontend/tailwind.config.js"
+}
