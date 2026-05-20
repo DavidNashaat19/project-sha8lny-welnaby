@@ -157,7 +157,7 @@ const Match = () => {
               >
                 <option value="all">Any</option>
                 <option value="Freelancer.com">Freelancer.com</option>
-                <option value="Fiverr.com">Fiverr.com</option>
+                <option value="Mostaqel.com">Mostaqel.com</option>
               </select>
             </div>
 
@@ -244,7 +244,7 @@ const Match = () => {
                     <div key={job.doc_id} className="glass-card p-6">
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-sm text-textMuted">{job.platform}</span>
-                        <span className="text-primary font-mono">Match: {(job.relevance_score * 100).toFixed(0)}%</span>
+                        <span className="text-primary font-mono">Match: {((job.relevance_score ?? 0) * 100).toFixed(0)}%</span>
                       </div>
                       <h4 className="text-lg font-display font-semibold mb-2">{job.title}</h4>
                       <p className="text-textMuted text-sm mb-4 line-clamp-2">{job.description_snippet}</p>

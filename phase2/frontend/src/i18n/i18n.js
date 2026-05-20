@@ -6,7 +6,7 @@ const resources = {
     translation: {
       "app_name": "Sha8lny Welnaby",
       "tagline": "Find Your Next Freelance Edge",
-      "sub_tagline": "AI-powered search across Freelancer.com & Fiverr.com — built on real IR algorithms",
+      "sub_tagline": "Monitor and analyze public listings from Freelancer.com & Mostaqel.com",
       "search_jobs": "Search Jobs",
       "explore_analytics": "Explore Analytics",
       "nav": {
@@ -35,7 +35,7 @@ const resources = {
     translation: {
       "app_name": "شغلني ولنبي",
       "tagline": "اكتشف فرصتك القادمة في العمل الحر",
-      "sub_tagline": "بحث ذكي عبر Fiverr وفريلانسر — مبني على خوارزميات استرجاع المعلومات",
+      "sub_tagline": "مراقبة وتحليل المشاريع العامة من فريلانسر ومستقل",
       "search_jobs": "ابحث عن وظائف",
       "explore_analytics": "تصفح الإحصائيات",
       "nav": {

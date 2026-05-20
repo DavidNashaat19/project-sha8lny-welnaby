@@ -98,7 +98,7 @@ const JobCard = ({ job }) => {
                 className="h-full bg-gradient-to-r from-primary to-secondary"
               />
             </div>
-            <span className="text-xs font-mono">{(job.relevance_score * 100).toFixed(0)}%</span>
+            <span className="text-xs font-mono">{((job.relevance_score ?? 0) * 100).toFixed(0)}%</span>
           </div>
           
           {job.matched_tokens && (

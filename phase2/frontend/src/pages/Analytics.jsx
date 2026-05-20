@@ -52,7 +52,7 @@ const Analytics = () => {
         >
           <option value="all">All Platforms</option>
           <option value="Freelancer.com">Freelancer.com</option>
-          <option value="Fiverr.com">Fiverr.com</option>
+          <option value="Mostaqel.com">Mostaqel.com</option>
         </select>
       </div>
 
