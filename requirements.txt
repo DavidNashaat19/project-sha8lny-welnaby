@@ -1,0 +1,48 @@
+# =============================================================================
+#  requirements.txt
+#  Project : Freelance Market Monitor (Sha8lny Welnaby)
+#  Course  : CS313x Information Retrieval
+# =============================================================================
+#
+#  Covers all third-party dependencies for:
+#    • scraper_ManeualSubmission.py  (Selenium deep crawl)
+#    • preprocess.py                 (IR text processing pipeline)
+#
+#  stdlib-only imports (no entry needed):
+#    argparse, dataclasses, json, logging, pathlib, random, re,
+#    subprocess, sys, time, typing, unicodedata, urllib
+#
+#  NOTE: Google Chrome + ChromeDriver are NOT pip packages.
+#  Install Chrome separately in the GitHub Actions workflow (Step 3):
+#    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+#    sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+#  ChromeDriver is managed automatically by Selenium 4.6+ SeleniumManager.
+#
+#  NLTK corpora (also not pip packages) must be downloaded at runtime:
+#    python -c "import nltk; [nltk.download(p) for p in ('stopwords','punkt','punkt_tab')]"
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# HTTP & HTML parsing  — scraper_ManeualSubmission.py
+# ---------------------------------------------------------------------------
+requests==2.34.2          # HTTP client used for robots.txt fetching
+beautifulsoup4==4.14.3    # HTML parser (bs4) — used alongside Selenium
+lxml==6.1.1               # Fast C-based parser backend for BeautifulSoup
+
+# ---------------------------------------------------------------------------
+# Browser automation  — scraper_ManeualSubmission.py
+# ---------------------------------------------------------------------------
+selenium==4.44.0          # Headless Chrome driver; 4.6+ includes SeleniumManager
+                          # (auto-downloads matching ChromeDriver, no PATH setup needed)
+
+# ---------------------------------------------------------------------------
+# NLP & text processing  — scraper_ManeualSubmission.py + preprocess.py
+# ---------------------------------------------------------------------------
+nltk==3.9.4               # Arabic & English stopwords, punkt tokeniser
+unicodedata2==17.0.1      # Fast drop-in for stdlib unicodedata;
+                          # used in Arabic normalisation helpers in the scraper
+
+# ---------------------------------------------------------------------------
+# Data handling & output  — preprocess.py
+# ---------------------------------------------------------------------------
+pandas==3.0.3             # DataFrame operations, CSV output (data_before/after_cleaning.csv)
