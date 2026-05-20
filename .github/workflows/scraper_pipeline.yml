@@ -322,9 +322,9 @@ jobs:
               except StopIteration:
                   print('  ❌ EMPTY — csv module found no data rows after header')
                   sys.exit(1)
+              data_rows = sum(1 for _ in reader) + 1   # row1 already consumed; must be inside with
           print(f'  📋 Header cols : {len(header)}  →  {header[:6]} ...')
           print(f'  📋 Row-1  cols : {len(row1)}')
-          data_rows = sum(1 for _ in reader) + 1   # row1 already consumed
           print(f'  📋 Data rows   : {data_rows}')
           if len(header) != len(row1):
               print(f'  ⚠️  Column count mismatch: header={len(header)}, row1={len(row1)}')
