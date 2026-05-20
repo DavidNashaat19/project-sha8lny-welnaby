@@ -65,34 +65,39 @@ The current dataset contains **75 deep-crawled projects** (50 from Freelancer.co
 ```mermaid
 flowchart TB
     subgraph Sources
-        FL[Freelancer.com]
-        MQ[Mostaqel.com]
+        FL["Freelancer.com"]
+        MQ["Mostaqel.com"]
     end
 
     subgraph Data
-        SC[scraper_ManualSubmission.py]
-        JSON[(freelance_data.json)]
+        SC["scraper_ManualSubmission.py"]
+        JSON[("freelance_data.json")]
     end
 
-    subgraph Backend["FastAPI Backend :8000"]
-        DL[data_loader.py]
-        IX[Inverted Index]
-        TF[TF-IDF / VSM / Boolean / Positional]
-        SE[Semantic Engine]
-        NER[NER Skill Extractor]
-        API[/api/*]
+    subgraph Backend["FastAPI Backend port 8000"]
+        DL["data_loader.py"]
+        IX["Inverted Index"]
+        TF["TF-IDF, VSM, Boolean, Phrase"]
+        SE["Semantic Engine"]
+        NER["NER Skill Extractor"]
+        API["REST API endpoints"]
     end
 
-    subgraph Frontend["React + Vite :5173"]
-        UI[Landing · Search · Analytics · Match · IR Lab]
+    subgraph Frontend["React plus Vite port 5173"]
+        UI["Landing, Search, Analytics, Match, IR Lab"]
     end
 
     FL --> SC
     MQ --> SC
     SC --> JSON
     JSON --> DL
-    DL --> IX & TF & SE & NER
-    IX & TF & SE --> API
+    DL --> IX
+    DL --> TF
+    DL --> SE
+    DL --> NER
+    IX --> API
+    TF --> API
+    SE --> API
     UI <-->|REST| API
 ```
 
