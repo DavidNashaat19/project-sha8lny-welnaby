@@ -193,7 +193,7 @@ jobs:
           echo "▶ Starting scraper — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo ""
 
-          python -u scraper_ManeualSubmission.ipynb
+          python -u scraper_ManeualSubmission.py
 
           echo ""
           echo "▶ Workspace after scraper run:"
