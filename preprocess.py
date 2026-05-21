@@ -154,11 +154,22 @@ def lowercase_english(text: str) -> str:
 # ---------------------------------------------------------------------------
 def tokenize_and_filter(text: str) -> list:
     """
-    Split on whitespace, remove stop-words and single-character tokens.
-    Returns a list of meaningful tokens ready for IR indexing.
+    Split on whitespace, strip trailing/leading punctuation from each token,
+    then remove stop-words and single-character tokens.
+
+    The noise-removal step (remove_noise) strips special chars from the full
+    text, but sentence-final periods stay glued to the last word of each
+    sentence because splitting happens after that pass.  Stripping punctuation
+    here ensures tokens like "well." and "commands." don't survive into the
+    final token list.
     """
     tokens = text.split()
-    return [t for t in tokens if t not in ALL_STOPWORDS and len(t) > 1]
+    cleaned = []
+    for t in tokens:
+        t = t.strip(".,;:!?()[]{}\"'""''–—…")   # strip leading/trailing punct
+        if t and t not in ALL_STOPWORDS and len(t) > 1:
+            cleaned.append(t)
+    return cleaned
 
 
 # ---------------------------------------------------------------------------
@@ -168,22 +179,54 @@ def tokenize_and_filter(text: str) -> list:
 # clean_budget() function.  The midpoint is therefore a simple arithmetic
 # operation.  extract_budget_float() is a string-parsing fallback used only
 # when both values are None/NaN (e.g. the project was listed as "Negotiable").
+
+# Currency lookup — ordered so longer/compound symbols precede their prefixes.
+# "CA$" must come before "$" so Canadian budgets aren't mis-tagged as USD.
+# Unicode symbols come first so they're never shadowed by ISO-code entries.
+_CURRENCY_MAP = [
+    ("₹",   "INR"),   ("₨",   "INR"),   ("₱",   "PHP"),
+    ("₩",   "KRW"),   ("₺",   "TRY"),   ("₴",   "UAH"),
+    ("₦",   "NGN"),
+    ("R$",  "BRL"),   ("CA$", "CAD"),   ("A$",  "AUD"),
+    ("NZ$", "NZD"),   ("HK$", "HKD"),   ("S$",  "SGD"),
+    ("$",   "USD"),   ("£",   "GBP"),   ("€",   "EUR"),
+    ("RM",  "MYR"),   ("د.إ", "AED"),   ("ر.س", "SAR"),
+    ("ج.م", "EGP"),   ("ريال","SAR"),
+    ("INR", "INR"),   ("PKR", "PKR"),   ("BDT", "BDT"),
+    ("CAD", "CAD"),   ("AUD", "AUD"),   ("NZD", "NZD"),
+    ("HKD", "HKD"),   ("SGD", "SGD"),   ("MYR", "MYR"),
+    ("AED", "AED"),   ("SAR", "SAR"),   ("EGP", "EGP"),
+    ("NGN", "NGN"),   ("PHP", "PHP"),   ("KRW", "KRW"),
+    ("BRL", "BRL"),   ("MXN", "MXN"),   ("ZAR", "ZAR"),
+    ("CHF", "CHF"),   ("SEK", "SEK"),   ("NOK", "NOK"),
+    ("DKK", "DKK"),   ("CZK", "CZK"),   ("PLN", "PLN"),
+    ("TRY", "TRY"),   ("UAH", "UAH"),
+    ("SR",  "SAR"),
+]
+
 _NUMBER_PAT = re.compile(r"[\d,]+\.?\d*")
 
 
-def extract_budget_float(raw: str) -> float | None:
+def extract_budget_float(raw: str) -> tuple:
     """
-    Parse a messy budget string into a single float (midpoint).
-    Slide-06 example: 'SR 200 - 500' -> 350.0
+    Parse a messy budget string into (midpoint_float, currency_code).
+    Slide-06 example: 'SR 200 - 500' -> (350.0, 'SAR')
     Only called when budget_min and budget_max are both None/NaN.
+    Returns (None, None) when no numeric value can be found.
     """
     if not raw or not isinstance(raw, str):
-        return None
+        return None, None
     raw_clean = raw.replace(",", "")
     nums = [float(n) for n in _NUMBER_PAT.findall(raw_clean) if n]
     if not nums:
-        return None
-    return sum(nums) / len(nums)
+        return None, None
+    midpoint = sum(nums) / len(nums)
+    currency = None
+    for symbol, code in _CURRENCY_MAP:
+        if symbol in raw:
+            currency = code
+            break
+    return midpoint, currency
 
 
 # ---------------------------------------------------------------------------
@@ -256,19 +299,20 @@ def process_row(row: dict) -> dict:
     min_valid = b_min is not None and not (isinstance(b_min, float) and pd.isna(b_min))
     max_valid = b_max is not None and not (isinstance(b_max, float) and pd.isna(b_max))
 
+    # Carry scraper currency through; only overwrite if string fallback finds one
+    budget_currency = row.get("budget_currency")
+
     if min_valid and max_valid:
         try:
             budget_extracted = (float(b_min) + float(b_max)) / 2
         except (ValueError, TypeError):
             budget_extracted = None
     elif min_valid:
-        # Only min is available (max is null) — use min as the point estimate
         try:
             budget_extracted = float(b_min)
         except (ValueError, TypeError):
             budget_extracted = None
     elif max_valid:
-        # Only max is available — use max as the point estimate
         try:
             budget_extracted = float(b_max)
         except (ValueError, TypeError):
@@ -276,12 +320,20 @@ def process_row(row: dict) -> dict:
     else:
         # Both are None/NaN (e.g. "Negotiable") — attempt string parsing
         budget_raw = (safe_str(b_min) + " " + safe_str(b_max)).strip()
-        budget_extracted = extract_budget_float(budget_raw) if budget_raw else None
+        budget_extracted, fallback_currency = (
+            extract_budget_float(budget_raw) if budget_raw else (None, None)
+        )
+        if fallback_currency:
+            budget_currency = fallback_currency
+
+    # Zero midpoint means budget was never fetched (scraper stored 0/0) — null it
+    if budget_extracted == 0.0:
+        budget_extracted = None
 
     return {
         # ── Traceability ──────────────────────────────────────────────────
         "platform":         row.get("platform"),
-        "url":              safe_str(row.get("url")) or None,   # kept from scraper output
+        "url":              safe_str(row.get("url")) or None,
         # ── Title ─────────────────────────────────────────────────────────
         "title_raw":        safe_str(row.get("title")) or "Unknown Title",
         "title_clean":      cleaned_text[:120] if cleaned_text else "",
@@ -292,7 +344,7 @@ def process_row(row: dict) -> dict:
         "token_count":      len(tokens),
         # ── Budget ────────────────────────────────────────────────────────
         "budget_extracted": budget_extracted,
-        "budget_currency":  row.get("budget_currency"),
+        "budget_currency":  budget_currency,
         "budget_type":      row.get("budget_type"),
         # ── Skills & category ─────────────────────────────────────────────
         "skills_clean": [
