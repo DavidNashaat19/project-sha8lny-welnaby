@@ -24,6 +24,10 @@
 #      output_dir / "data_after_cleaning.csv"
 #  • Required packages: pandas, nltk (stopwords + punkt + punkt_tab corpora)
 #  • Encoding: utf-8-sig (BOM) — written by preprocess.py's to_csv calls
+#  • data_before_cleaning.csv : 12 columns
+#  • data_after_cleaning.csv  : 15 columns (description_snippet restored,
+#      title_clean now title-only, cleaned_text now corpus-only,
+#      budget_extracted=None for rows where budget was never fetched)
 #  • CSV column count verification uses Python, not shell tr, because
 #    token/skills columns contain commas inside quoted fields.
 #
